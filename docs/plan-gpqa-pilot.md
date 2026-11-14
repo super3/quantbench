@@ -31,40 +31,64 @@ Pin the revision hash of every repo used and record it with the results.
 ## Which quants
 
 The inventory of everything published is in
-[`quant-inventory.md`](quant-inventory.md). This pilot tests what people
-actually download, plus one control:
+[`quant-inventory.md`](quant-inventory.md). This pilot tests **every quant
+from unsloth and bartowski, plus Qwen's official files**:
 
 - **unsloth** — the most-downloaded quants of this model by a wide margin.
   Most rungs are unsloth's "UD" dynamic mixes, not standard llama.cpp quants.
 - **bartowski** — standard llama.cpp quant types, all calibrated with an
-  imatrix. Run at the rungs matching unsloth's, it separates the effect of bit
+  imatrix. Comparing the two at matched sizes separates the effect of bit
   width from the effect of unsloth's recipe.
-- **Qwen (official)** — BF16 as the reference, and the official FP8.
+- **Qwen (official)** — BF16 as the reference, and the official FP8. These
+  are the only two formats Qwen publishes for this model.
 
-### GGUF ladder (llama.cpp)
+### GGUF (llama.cpp)
 
-| Rung | unsloth (`unsloth/Qwen3.8-27B-GGUF`) | bartowski (`bartowski/Qwen3.8-27B-GGUF`) |
-|---|---|---|
-| BF16 (reference) | BF16 — 54.7 GB | — (shared reference) |
-| 8-bit | Q8_0 — 29.1 GB | — (shared; Q8_0 uses no imatrix) |
-| 6-bit | UD-Q6_K — 22.0 GB | Q6_K — 23.9 GB |
-| 5-bit | UD-Q5_K_M — 19.9 GB | Q5_K_M — 20.9 GB |
-| 4-bit | UD-Q4_K_M — 16.6 GB | Q4_K_M — 17.4 GB |
-| 4-bit | UD-IQ4_XS — 14.4 GB | IQ4_XS — 15.5 GB |
-| 3-bit | UD-Q3_K_XL — 13.2 GB | Q3_K_M — 13.4 GB |
-| 2-bit (optional) | UD-Q2_K_XL — 10.0 GB | Q2_K — 10.8 GB |
+One BF16 reference: unsloth's BF16 GGUF (54.7 GB). bartowski's bf16 GGUF
+should be an identical conversion; check it with KL divergence (expect ~0)
+rather than a full GPQA run.
+
+**unsloth — `unsloth/Qwen3.8-27B-GGUF` (25 quants).** All are UD dynamic
+mixes except Q8_0, Q4_0 and Q4_1.
+
+| Bits | Quants (GB) |
+|---|---|
+| 8 | Q8_K_XL (31.5), Q8_0 (29.1), Q8_K_L (28.1) |
+| 6 | Q6_K_XL (25.3), Q6_K_L (24.2), Q6_K_M (23.1), Q6_K (22.0) |
+| 5 | Q5_K_XL (21.0), Q5_K_M (19.9), Q5_K_S (18.8) |
+| 4 | Q4_K_XL (17.7), Q4_1 (17.5), Q4_K_M (16.6), Q4_0 (16.1), Q4_K_S (15.4), IQ4_XS (14.4) |
+| 3 | Q3_K_XL (13.2), IQ3_S (12.0), IQ3_XXS (10.9) |
+| 2 | Q2_K_XL (10.0), IQ2_S (8.4), IQ2_XS (7.6), IQ2_XXS (7.2) |
+| 1 | IQ1_M (6.7), IQ1_S (6.2) |
+
+**bartowski — `bartowski/Qwen3.8-27B-GGUF` (27 quants).**
+
+| Bits | Quants (GB) |
+|---|---|
+| 8 | Q8_0 (29.1) |
+| 6 | Q6_K_L (25.0), Q6_K (23.9), Q6_K_S (22.9) |
+| 5 | Q5_K_L (21.5), Q5_K_M (20.9), Q5_K_S (19.6) |
+| 4 | Q4_K_L (18.8), Q4_1 (17.8), Q4_K_M (17.4), IQ4_NL (17.4), Q4_K_S (16.4), Q4_0 (16.4), IQ4_XS (15.5) |
+| 3 | Q3_K_XL (16.4), IQ3_M (14.9), Q3_K_L (14.1), Q3_K_M (13.4), IQ3_XS (12.8), Q3_K_S (12.7), IQ3_XXS (12.3) |
+| 2 | Q2_K_L (13.1), Q2_K (10.8), IQ2_M (10.5), IQ2_S (9.7), IQ2_XS (9.1), IQ2_XXS (8.9) |
 
 The same name does not mean the same file: unsloth's UD-Q4_K_M and
-bartowski's Q4_K_M differ by 0.8 GB. Compare rungs by measured size
-(bits per weight) as well as by name.
+bartowski's Q4_K_M differ by 0.8 GB, and bartowski's Q3_K_XL is larger than
+its Q4_K_S. Compare quants by measured size (bits per weight) as well as by
+name.
 
 ### Native formats (vLLM, RTX PRO 6000 only)
 
-| Rung | Repo | Size |
+| Repo | Format | Size |
 |---|---|---|
-| BF16 (reference) | `Qwen/Qwen3.8-27B` | 55.6 GB |
-| FP8 | `Qwen/Qwen3.8-27B-FP8` | 30.9 GB |
-| NVFP4 | `unsloth/Qwen3.8-27B-NVFP4` | 23.4 GB |
+| `Qwen/Qwen3.8-27B` | BF16 (reference) | 55.6 GB |
+| `Qwen/Qwen3.8-27B-FP8` | FP8, official | 30.9 GB |
+| `unsloth/Qwen3.8-27B-FP8` | FP8 | 30.9 GB |
+| `unsloth/Qwen3.8-27B-NVFP4` | NVFP4, mixed with FP8 | 23.4 GB |
+| `unsloth/Qwen3.8-27B-unsloth-bnb-4bit` | bitsandbytes 4-bit | 22.3 GB |
+
+unsloth's FP8 has the same layout as Qwen's (e4m3, 128×128 blocks). If the two
+turn out to be bit-identical, drop one.
 
 **Never compare across engines.** vLLM and llama.cpp differ in kernels,
 sampling and numerics. Each engine's quants are scored against that engine's
@@ -164,15 +188,27 @@ sets the output limit for the sweep and the compute estimate in step 5.
 
 ### 5. Run the matrix
 
-Cells: 12 GGUF (BF16, Q8_0, five unsloth rungs, five bartowski rungs) plus
-3 vLLM (BF16, FP8, NVFP4), × 2 modes. Add the 2-bit rungs if the 3-bit
-rungs still show little damage.
+Cells: 53 GGUF (BF16 plus 25 unsloth and 27 bartowski quants) and 5 vLLM,
+58 in all, each in thinking and non-thinking mode.
 
 Tokens per cell ≈ 198 items × samples × mean trace length. At an assumed
-8k-token mean trace and 5 samples, a thinking-mode cell is ~8M tokens;
-non-thinking cells are far smaller. Replace that assumption with the
-measured trace length from step 4 before committing the RTX PRO 6000 to the
-sweep.
+8k-token mean trace and 5 samples, a thinking-mode cell is ~8M tokens, so
+all 58 thinking cells come to roughly 460M generated tokens. Non-thinking
+cells are far smaller. Replace the assumed trace length with the one measured
+in step 4, and measure the RTX PRO 6000's batched throughput, before
+committing to the full sweep.
+
+Run it in stages so every quant has a result early and the expensive part
+comes last:
+
+1. **KL divergence on all 52 GGUF quants** (step 6). No generation, so it is
+   cheap.
+2. **Non-thinking mode on all 58 cells.** Short answers, so this is cheap
+   too.
+3. **Thinking mode, 1 sample per item, on all 58 cells.**
+4. **Thinking mode, up to 5 samples per item,** in that order of priority
+   if time runs short: the rungs where stages 1–3 show the knee in the
+   curve, then the rest.
 
 ### 6. Measure KL divergence alongside
 
@@ -196,8 +232,12 @@ per token, so full KL for FP8 and NVFP4 is not available without extra tooling.
 - Accuracy with confidence intervals
 - McNemar, each quant vs. BF16
 - Flip rate and flip direction
-- unsloth vs. bartowski at each rung: does the recipe matter, or only the
-  bit width?
+- Accuracy and KL plotted against bits per weight, one curve per publisher:
+  at the same size, does unsloth's recipe beat bartowski's, or does only the
+  bit width matter?
+- Within a publisher, quants of the same size but different types (for
+  example Q4_K_S vs. IQ4_NL vs. Q4_0): does the quant type matter at a fixed
+  size?
 - Per-subject breakdown (physics / chemistry / biology)
 - Thinking-trace length vs. quant level — trace length plausibly drifts before
   accuracy does, which would make it a useful early-warning signal
