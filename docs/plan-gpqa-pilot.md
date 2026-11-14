@@ -219,6 +219,49 @@ comes last:
    if time runs short: the rungs where stages 1–3 show the knee in the
    curve, then the rest.
 
+#### Time estimate: one RTX PRO 6000
+
+Assumptions, to be replaced with measurements from step 4:
+
+- **Throughput** (total across parallel requests): ~500 tok/s for GGUF quants
+  in llama.cpp (plausible range 300–1,000) and ~1,000 tok/s for FP8 and
+  NVFP4 in vLLM.
+- **Mean output length:** 8k tokens per answer in thinking mode, ~1k in
+  non-thinking mode.
+
+| Stage | Tokens generated | Time at ~500 tok/s | Plausible range |
+|---|---|---|---|
+| Download all 59 files | ~1.1 TB | ~3 h on a 1 Gbps line | — |
+| 1. Perplexity and KL, all quants | almost none | ~1–2 h, mostly model loading | — |
+| 2. Non-thinking, 58 cells × 1 sample | ~12M | ~6 h | 3–11 h |
+| 3. Thinking, 58 cells × 1 sample | ~92M | ~2 days | 1–3.5 days |
+| 4. Thinking, 4 more samples per item | ~370M | ~8.5 days | 4–14 days |
+| **Total** | **~470M** | **~11 days** | **~6–18 days** |
+
+Stages 1–3 take about 2–3 days and give every quant a GPQA score. Stage 4
+is most of the cost and can stop partway.
+
+What moves the estimate:
+
+- **Trace length scales it linearly.** At the default `xhigh` reasoning
+  effort, GPQA traces may average 12–15k tokens rather than 8k, which would
+  push the full run past 3 weeks.
+- **Throughput scales it inversely.** In step 4, spend an hour measuring
+  tok/s at 16, 32 and 64 parallel requests, at BF16 and at Q4.
+- **The bitsandbytes cell is slow,** perhaps 100–200 tok/s, so at 5 samples it
+  alone takes most of a day.
+
+Ways to cut it if needed:
+
+- 3 thinking samples per item instead of 5: saves ~40% of the total.
+- `reasoning_effort: medium`: shorter traces, but the BF16 baseline will no
+  longer be comparable to Qwen's reported 89.2%.
+- Drop near-duplicate quants, such as unsloth's Q8_K_L next to Q8_0, or
+  Q4_0 and Q4_1. Each dropped cell saves ~4–5 hours at full depth.
+
+Disk: all 59 files take ~1.1 TB. Download and delete in batches if space is
+short.
+
 ### 6. Measure perplexity and KL divergence alongside
 
 This is the project's central claim, so make the comparison direct: capture
