@@ -90,6 +90,15 @@ name.
 unsloth's FP8 has the same layout as Qwen's (e4m3, 128×128 blocks). If the two
 turn out to be bit-identical, drop one.
 
+**Run the bitsandbytes cell last.** bitsandbytes is mainly a fine-tuning
+format: it is what QLoRA trains on, and few people serve a model with it.
+This file uses NF4 with double quantization and keeps `lm_head`, the vision
+encoder and some linear-attention projections (`in_proj_qkv`, `in_proj_a`,
+`in_proj_b`) in 16-bit, which is why it is larger than the 4-bit GGUFs. It
+answers whether the copy people fine-tune on behaves like the copy they run.
+But it is the slowest cell to generate with and the least representative of
+everyday use, so it is the first cell to drop if time runs short.
+
 **Never compare across engines.** vLLM and llama.cpp differ in kernels,
 sampling and numerics. Each engine's quants are scored against that engine's
 own BF16 run, and the gap between the two BF16 runs measures the engine
