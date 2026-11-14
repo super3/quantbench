@@ -122,7 +122,7 @@ shakedown. Once the harness works, add a larger benchmark (MMLU-Pro, ~12k
 items); the paired-item machinery built here transfers directly.
 
 **A 32B model does not fit 16 GB even at Q3**, so this pilot cannot run on
-Frontera's RTX 5000 nodes and is Vista-only. That gap is itself worth
+16 GB consumer GPUs and is Vista-only. That gap is itself worth
 recording: the 27–32B class is out of reach for the consumer VRAM tier this
 project is fundamentally about. The consumer-hardware arm needs smaller
 models.
