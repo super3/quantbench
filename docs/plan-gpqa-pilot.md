@@ -56,8 +56,8 @@ H200. Record the revision hash.
 ### 2. Build the quant ladder
 
 GGUF via llama.cpp — it has the richest ladder and it is what the target
-audience actually runs. Convert once; run the quantization on Frontera's CPU
-nodes while they still exist (queues close 2026-10-01).
+audience actually runs. Convert to a BF16 GGUF once and quantize every rung
+from that single file.
 
 | Quant | Approx. size |
 |---|---|
