@@ -210,8 +210,8 @@ committing to the full sweep.
 Run it in stages so every quant has a result early and the expensive part
 comes last:
 
-1. **KL divergence on all 52 GGUF quants** (step 6). No generation, so it is
-   cheap.
+1. **Perplexity and KL divergence** (step 6): both on all 52 GGUF quants,
+   and perplexity on the vLLM cells. No generation, so it is cheap.
 2. **Non-thinking mode on all 58 cells.** Short answers, so this is cheap
    too.
 3. **Thinking mode, 1 sample per item, on all 58 cells.**
@@ -219,29 +219,52 @@ comes last:
    if time runs short: the rungs where stages 1–3 show the knee in the
    curve, then the rest.
 
-### 6. Measure KL divergence alongside
+### 6. Measure perplexity and KL divergence alongside
 
 This is the project's central claim, so make the comparison direct: capture
-next-token KL against the BF16 reference on the same 198 prompts. The
-deliverable is a statement about where KL predicted degradation that GPQA did
-not show, and where it missed degradation that GPQA did.
+the two metrics practitioners normally rely on, on the same 198 prompts, and
+compare them with GPQA.
+
+- **Perplexity**: how well the quant predicts the actual text. It needs no
+  reference model, but it only looks at the probability given to the correct
+  next token, so errors can cancel out.
+- **KL divergence against BF16**: how far the quant's full next-token
+  distribution has drifted from the reference. It is more sensitive than
+  perplexity.
+
+The deliverable is a statement, for each metric, about where it predicted
+degradation that GPQA did not show, and where it missed degradation that
+GPQA did. If KL tracks GPQA better than perplexity does, or neither does,
+that is itself a finding.
 
 Use `llama-perplexity`: save the BF16 logits once with
 `--kl-divergence-base`, then score each GGUF quant with `--kl-divergence`.
+One run per quant records all of:
+
+- perplexity, and its change from BF16
+- mean KL, plus the 99th-percentile and maximum KL (the mean hides the tail)
+- "same top token %": how often the quant's most likely token matches BF16's
+
 The logits file is large, roughly 0.5 MB per token with this model's ~248k
 vocabulary, so keep the scored text to the GPQA prompts. The file is
 portable, so the 7900 can score its quants against a reference generated on
 another machine.
 
-KL covers the GGUF ladder only. vLLM returns only the top few log-probabilities
-per token, so full KL for FP8 and NVFP4 is not available without extra tooling.
+Coverage differs for the vLLM cells. Perplexity only needs the probability
+of the actual next token, which vLLM returns (`prompt_logprobs`), so it
+covers every cell. KL needs the full distribution, and vLLM returns only the
+top few log-probabilities per token, so full KL for FP8, NVFP4 and
+bitsandbytes is not available without extra tooling.
 
 ### 7. Analyze
 
 - Accuracy with confidence intervals
 - McNemar, each quant vs. BF16
 - Flip rate and flip direction
-- Accuracy and KL plotted against bits per weight, one curve per publisher:
+- Perplexity and KL vs. GPQA flips, quant by quant: which metric, if
+  either, predicts the task damage?
+- Accuracy, perplexity and KL plotted against bits per weight, one curve per
+  publisher:
   at the same size, does unsloth's recipe beat bartowski's, or does only the
   bit width matter?
 - Within a publisher, quants of the same size but different types (for
